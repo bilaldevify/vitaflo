@@ -1,0 +1,162 @@
+import { Edit, Mail, Phone, Trash2, UserPlus, Users } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import EmptyState from '../shared/EmptyState';
+import { Badge } from '../ui/badge';
+import { Button } from '../ui/button';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '../ui/table';
+import UsersTableSkeleton from './UsersTableSkeleton';
+
+const statusBadgeVariants = {
+  active: 'success',
+  inactive: 'danger',
+  suspended: 'warning',
+  unverified: 'secondary',
+};
+
+const avatarTones = ['brand', 'info', 'success', 'warning', 'danger'];
+const toneGradients = {
+  brand: 'from-brand-500 to-brand-700',
+  info: 'from-info to-info/70',
+  success: 'from-success to-success/70',
+  warning: 'from-warning to-warning/70',
+  danger: 'from-danger to-danger/70',
+};
+
+export default function UsersTable({ users, loading, onEdit, onDelete }) {
+  const navigate = useNavigate();
+
+  if (loading) return <UsersTableSkeleton />;
+
+  if (!users?.length) {
+    return (
+      <EmptyState
+        icon={UserPlus}
+        title="No clinicians found"
+        description="Try adjusting your search, or add a new clinician"
+      />
+    );
+  }
+
+  const viewPatients = (userId, fullName) => {
+    navigate('/patients', {
+      state: { assignedClinicianId: userId, assignedClinicianName: fullName },
+    });
+  };
+
+  return (
+    <div className="table-container">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Name</TableHead>
+            <TableHead>Email</TableHead>
+            <TableHead>Phone</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Joined</TableHead>
+            <TableHead>Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {users.map((user, i) => {
+            const tone = avatarTones[i % avatarTones.length];
+            const gradient = toneGradients[tone];
+            const fullName = `${user.f_name || ''} ${user.l_name || ''}`.trim();
+
+            const statusLabel = user.user_status?.name || 'Unknown';
+            const statusKey = statusLabel.toLowerCase();
+
+            return (
+              <TableRow key={user.user_id}>
+                <TableCell>
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-caption font-semibold text-white bg-linear-to-br ${gradient}`}
+                    >
+                      {user.f_name?.[0]}
+                      {user.l_name?.[0]}
+                    </div>
+                    <div>
+                      <p className="font-medium text-fg text-body">
+                        {fullName}
+                      </p>
+                      <p className="text-caption text-fg-muted truncate">
+                        <span className="font-medium text-fg">
+                          @{user.userName || 'no-username'}
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+                </TableCell>
+                <TableCell className="text-fg-muted">
+                  <Mail className="h-3 w-3 inline mr-1.5" />
+                  {user.email}
+                </TableCell>
+                <TableCell className="text-fg-muted truncate max-w-62.5">
+                  <Phone className="h-3 w-3 inline mr-1.5" />
+                  {user.phone}
+                </TableCell>
+                <TableCell>
+                  <Badge
+                    variant={statusBadgeVariants[statusKey] || 'secondary'}
+                    className="capitalize"
+                  >
+                    {statusLabel}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-caption text-fg-muted whitespace-nowrap">
+                  {user.reg_date
+                    ? new Date(user.reg_date).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                      })
+                    : '—'}
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => viewPatients(user.user_id, fullName)}
+                      className="h-8 gap-2"
+                    >
+                      <Users className="h-4 w-4" />
+                      View Patients
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onEdit(user)}
+                      className="h-8 gap-2"
+                    >
+                      <Edit className="h-4 w-4" />
+                      Edit
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onDelete(user.user_id)}
+                      className="h-8 gap-2 text-danger hover:text-danger"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Deactivate
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}

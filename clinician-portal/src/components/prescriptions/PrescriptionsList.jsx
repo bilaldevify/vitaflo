@@ -1,0 +1,206 @@
+import { ChevronDown, ChevronUp, ClipboardList, Pill, UserRound } from 'lucide-react';
+import { Badge } from '../../components/ui/badge';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '../../components/ui/card';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '../../components/ui/table';
+import EmptyState from '../shared/EmptyState';
+import Pagination from '../ui/pagination';
+import PrescriptionsListSkeleton from './PrescriptionsListSkeleton';
+
+export default function PrescriptionsList({
+  prescriptions,
+  loading,
+  page,
+  totalPages,
+  totalRecords,
+  expanded,
+  onToggleExpand,
+  onPageChange,
+  showPatientColumn = true,
+  onSelectPatient,
+}) {
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between border-b border-border pb-4">
+        <CardTitle className="text-subheading font-semibold flex items-center gap-2.5 text-fg">
+          <div className="flex h-7 w-7 items-center justify-center rounded-(--radius-control) bg-linear-to-br from-info to-info/70">
+            <ClipboardList className="h-3.5 w-3.5 text-white" />
+          </div>
+          Prescriptions
+          {totalRecords > 0 && <Badge variant="info">{totalRecords}</Badge>}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="pt-4">
+        {loading ? (
+          <PrescriptionsListSkeleton />
+        ) : prescriptions.length > 0 ? (
+          <div className="space-y-3">
+            {prescriptions.map((p, i) => {
+              const isExpanded = expanded[i];
+              const canSelectPatient =
+                showPatientColumn &&
+                typeof onSelectPatient === 'function' &&
+                p.patient_id != null;
+
+              return (
+                <div
+                  key={p.pr_id || i}
+                  className="rounded-card border border-border bg-surface transition-shadow hover:shadow-card-hover"
+                >
+                  <div className="p-4 flex items-center justify-between">
+                    <div
+                      className="flex-1 min-w-0 cursor-pointer"
+                      onClick={() => onToggleExpand(i)}
+                    >
+                      <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                        <span className="text-body font-semibold text-fg">
+                          {p.diagnosis}
+                        </span>
+                        <Badge variant="secondary" className="text-caption">
+                          {new Date(p.pr_date).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: '2-digit',
+                          })}
+                        </Badge>
+
+                        {/* ✅ Patient chip — clicking narrows the whole list to this patient */}
+                        {showPatientColumn && (
+                          <button
+                            type="button"
+                            disabled={!canSelectPatient}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (canSelectPatient) {
+                                onSelectPatient(
+                                  p.patient_id,
+                                  p.patient_name || p.patient_username,
+                                );
+                              }
+                            }}
+                            className={`inline-flex items-center gap-1 text-caption rounded-pill bg-surface-raised px-2 py-0.5 ${
+                              canSelectPatient
+                                ? 'cursor-pointer hover:bg-brand-50 hover:text-brand-700'
+                                : ''
+                            }`}
+                          >
+                            <UserRound className="h-3 w-3" />
+                            {p.patient_name || p.patient_username || p.patient_id}
+                          </button>
+                        )}
+                      </div>
+                      {p.pharmacy_instruction && (
+                        <p className="text-caption text-fg-muted mb-2">
+                          {p.pharmacy_instruction}
+                        </p>
+                      )}
+                      <div className="flex flex-wrap gap-1">
+                        {p.medicines?.map((m, j) => (
+                          <Badge
+                            key={j}
+                            variant="brand"
+                            className="text-caption"
+                          >
+                            <Pill className="h-3 w-3 mr-1" />
+                            {m.drug} {m.dosage}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                    <div
+                      className="flex items-center gap-3 ml-4 shrink-0 cursor-pointer"
+                      onClick={() => onToggleExpand(i)}
+                    >
+                      {p.doctor && (
+                        <span className="text-caption text-fg-muted hidden sm:block">
+                          Dr. {p.doctor.f_name} {p.doctor.l_name}
+                        </span>
+                      )}
+                      {isExpanded ? (
+                        <ChevronUp className="h-5 w-5 text-fg-muted" />
+                      ) : (
+                        <ChevronDown className="h-5 w-5 text-fg-muted" />
+                      )}
+                    </div>
+                  </div>
+
+                  {isExpanded && (
+                    <div className="px-4 pb-4 border-t border-border pt-3">
+                      <h4 className="text-caption font-semibold text-fg-muted uppercase tracking-wide mb-3">
+                        Medicine Details
+                      </h4>
+                      <div className="table-container">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Drug</TableHead>
+                              <TableHead>Dosage</TableHead>
+                              <TableHead>Frequency</TableHead>
+                              <TableHead>Qty</TableHead>
+                              <TableHead>Days</TableHead>
+                              <TableHead>Direction</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {p.medicines?.map((m, j) => (
+                              <TableRow key={j}>
+                                <TableCell className="font-medium text-fg">
+                                  {m.drug}
+                                </TableCell>
+                                <TableCell>{m.dosage}</TableCell>
+                                <TableCell>{m.frequency}</TableCell>
+                                <TableCell className="tabular-nums">
+                                  {m.quantity || '1'}
+                                </TableCell>
+                                <TableCell className="tabular-nums">
+                                  {m.days || '1'}
+                                </TableCell>
+                                <TableCell>{m.direction}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                      <div className="flex justify-between mt-3 text-caption text-fg-muted">
+                        <span>
+                          Dr. {p.doctor?.f_name} {p.doctor?.l_name}
+                        </span>
+                        <span>{new Date(p.pr_date).toLocaleString()}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              total={totalRecords}
+              label="records"
+              loading={loading}
+              onPageChange={onPageChange}
+            />
+          </div>
+        ) : (
+          <EmptyState
+            icon={ClipboardList}
+            title="No prescriptions found"
+            description="Try adjusting your search or date range"
+          />
+        )}
+      </CardContent>
+    </Card>
+  );
+}
